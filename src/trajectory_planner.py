@@ -228,14 +228,14 @@ class TrajectoryPlanner: # path planner
             return [False, 999]
 
     def check_center(self, obs_x, obs_y, target_xs, target_ys,MACARON_TREAD):
-        d = ((target_xs[4] - obs_x)**2 + (target_ys[4] - obs_y)**2)**0.5
+        dist = np.hypot(target_xs[4] - obs_x, target_ys[4] - obs_y)
 
-        collision = (d <= (MACARON_TREAD/2))
-        if collision:
+        collision_detect = (dist <= (MACARON_TREAD/2))
+        if collision_detect:
                 print('중앙선 침범!')
                 return True
-
-        return False
+        else:
+            return False
 
     def __select_longest_trajectory(self, candidate_paths, obs_xy, MACARON_TREAD):
         max_distance = 0
