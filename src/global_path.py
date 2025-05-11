@@ -76,12 +76,7 @@ class GlobalPath:
     def xy2sl(self, x, y, mode=0, base_iter=30, mission=None):
         ref_index = self.getClosestSIndexCurXY(x, y, mode=mode, base_iter=base_iter, mission=mission)
         self.cur_ref_index = ref_index
-        return self.s[ref_index], cartesian_frenet_conversion.calcOffsetPoint(x, y, self.rx[ref_index],
-                                                                              self.ry[ref_index], self.ryaw[ref_index]) #l값
-
-    def get_current_reference_point(self):
-        return self.rx[self.cur_ref_index], self.ry[self.cur_ref_index], self.ryaw[self.cur_ref_index], self.rk[
-            self.cur_ref_index]
+        return self.s[ref_index], cartesian_frenet_conversion.calcOffsetPoint(x, y, self.rx[ref_index], self.ry[ref_index], self.ryaw[ref_index])
 
     def get_current_reference_yaw(self):
         yaw = self.ryaw[self.cur_ref_index]
