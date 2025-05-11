@@ -136,8 +136,8 @@ class TrajectoryPlanner: # path planner
         si, qi = self.glob_path.xy2sl(x, y)
         self.current_s = si
         self.current_q = qi
-        ryaw = self.glob_path.get_current_reference_yaw()
-        dtheta = heading - ryaw #여기 먼가 이상할수도 (2파이 보정부분때매 나중에 확인 ㄱ)
+        ryaw = self.glob_path.get_current_reference_yaw_no_s()
+        dtheta = heading - ryaw 
         
         safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, qf, path_num)
         selected_path = self.__select_optimal_trajectory(safe_candidate_paths)

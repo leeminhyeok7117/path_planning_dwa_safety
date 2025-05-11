@@ -44,6 +44,11 @@ class GlobalPath:
         self.cur_s_ref_index = 0
         self.last_search_time = 0
         
+        self.rx_arr = np.array(self.rx)
+        self.ry_arr = np.array(self.ry)
+        self.ryaw_arr = np.array(self.ryaw)
+        self.rk_arr = np.array(self.rk)
+
     def getClosestSIndexCurXY(self, x, y, mode=0, base_iter=30, mission=None): 
         ref_index = 0
 
@@ -79,20 +84,22 @@ class GlobalPath:
         return self.s[ref_index], cartesian_frenet_conversion.calcOffsetPoint(x, y, self.rx[ref_index], self.ry[ref_index], self.ryaw[ref_index])
 
     def get_current_reference_yaw(self):
-        yaw = self.ryaw[self.cur_ref_index]
+        yaw = self.ryaw_arr[self.cur_s_ref_index]
         return np.array(np.where(yaw<=0, yaw+2*pi, yaw))
+    
+    def get_current_reference_yaw_no_s(self):
+        return self.ryaw_arr[self.cur_ref_index]
 
     def get_current_reference_kappa(self):
-        return np.array(self.rk[self.cur_s_ref_index])
+        return np.array(self.rk_arr[self.cur_s_ref_index])
 
     def sl2xy(self, s, l):
-        rx, ry, ryaw = np.array(self.rx), np.array(self.ry), np.array(self.ryaw)
         ref_index = self.getClosestSIndexCurS(s)
         self.cur_s_ref_index = ref_index
         
-        cur_rx = rx[ref_index]
-        cur_ry = ry[ref_index]
-        cur_ryaw = ryaw[ref_index]
+        cur_rx = self.rx_arr[ref_index]
+        cur_ry = self.ry_arr[ref_index]
+        cur_ryaw = self.ryaw_arr[ref_index]
         
         x = cur_rx + l * np.cos(cur_ryaw + pi / 2)
         y = cur_ry + l * np.sin(cur_ryaw + pi / 2)
