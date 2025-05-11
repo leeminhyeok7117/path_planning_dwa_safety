@@ -124,52 +124,6 @@ class TrajectoryPlanner: # path planner
 
         return candidate_paths
     
-    # def generate_path_reverse(self, si, qi, dtheta, ds = 3, qf = ROAD_WIDTH/2, path_num = 3): 
-    #     # (si, qi): 시작상태, dtheta: heading - ryaw, ds: polynomial의 길이, qf: 종료상태 q
-    #     candidate_paths = [] # 후보경로들은 frenet_path class가 리스트 안에 담긴다.
-    #     sf_final = si
-    #     si = sf_final - ds - self.S_MARGIN
-
-    #     # generate path to each offset goal
-    #     for qf_ in np.linspace(qf, -qf, path_num): # 양수부터 차례대로 생성
-    #         fp = frenet_path.Frenet_path() # 경로. 이 안에 모든 정보가 담긴다.
-    #         qs = polynomial.cubic_polynomial(si, qi, dtheta, ds, qf_)  
-    #         fp.s = [s for s in np.arange(si, sf_final, sl_d)]
-    #         fp.q = [qs.calc_point(s) for s in fp.s]
-    #         fp.q.reverse()
-    #         print(fp.q)
-    #         #######################################
-    #         # 각 경로의 x, y, yaw, kappa계산
-    #         for i in range(len(fp.s)): 
-    #             x, y = self.glob_path.sl2xy(fp.s[i], fp.q[i])
-
-    #             yaw = self.glob_path.get_current_reference_yaw()
-    #             rkappa = self.glob_path.get_current_reference_kappa()
-    #             fp.x.append(x)
-    #             fp.y.append(y)
-    #             path_yaw = yaw
-    #             if path_yaw <= 0:
-    #                 # print(path_yaw, 'pi')
-    #                 path_yaw = 2 * pi + path_yaw
-    #             fp.yaw.append(path_yaw)
-    #             fp.k.append(qs.calc_kappa(fp.s[i], rkappa))
-    #         #######################################
-            
-    #         fp.s.reverse()
-    #         fp.k.reverse()
-    #         fp.yaw.reverse()
-    #         fp.x.reverse()
-    #         fp.y.reverse()
-            
-    #         # calculate path cost
-    #         fp.offset_cost = abs(qf_)
-    #         fp.consistency_cost = self.calc_consistency_cost(fp.q, self.last_selected_path.q)
-    #         fp.total_cost = W_CONSISTENCY * fp.consistency_cost + W_OFFSET * fp.offset_cost
-            
-    #         candidate_paths.append(fp)
-
-    #     return candidate_paths
-    
     def calc_consistency_cost(self, target_q, last_selected_q):
         consistency_cost = 0
         min_len = min(len(target_q), len(last_selected_q))
@@ -177,94 +131,19 @@ class TrajectoryPlanner: # path planner
         
         consistency_cost = np.sum(diff) / len(last_selected_q) if len(last_selected_q) > 0 else 0
         return consistency_cost
-
-    def __select_optimal_trajectory(self, candidate_paths, obs_xy,MACARON_TREAD):
-        mincost = candidate_paths[0].total_cost
+    
+    def __select_optimal_trajectory(self, candidate_paths):
+        mincost = float('inf')
         select_path = None
-        collision = False
-        center_collision = False
-        self.non_center = []
-        num = 0
-
+        
         for fp in candidate_paths:
-            num += 1
-            for xy in self.center:
-                if self.check_center(xy[0], xy[1], fp.x, fp.y, MACARON_TREAD): #예선 : 4, 본선 : 6
-                    center_collision = True
-                    break
-
-            if center_collision:
-                self.non_center.append(num-1)
-                #print(self.non_center)
-                center_collision = False
-                continue
-
-            ################ 본선 
-            for xy in obs_xy:
-                check = self.check_collision(xy[0], xy[1], fp.x, fp.y, MACARON_TREAD)
-                if check[0]:
-                    collision = True
-                    # print("충돌1"),num
-                    break
-            if collision :
-                collision = False
-                continue
-
             if mincost >= fp.total_cost:
                 mincost = fp.total_cost
                 select_path = fp
            
         return select_path
 
-    def check_collision(self, obs_x, obs_y, target_xs, target_ys, MACARON_TREAD):
-        dist = np.hypot(target_xs - obs_x, target_ys - obs_y)
-
-        collision_detect = (dist <= (MACARON_TREAD/2))
-        if np.any(collision_detect):
-            print('장애물 감지!')
-            self.current_q = 0
-            return [True, np.argmax(collision_detect)]
-        else:
-            return [False, 999]
-
-    def check_center(self, obs_x, obs_y, target_xs, target_ys,MACARON_TREAD):
-        dist = np.hypot(target_xs[4] - obs_x, target_ys[4] - obs_y)
-
-        collision_detect = (dist <= (MACARON_TREAD/2))
-        if collision_detect:
-                print('중앙선 침범!')
-                return True
-        else:
-            return False
-
-    def __select_longest_trajectory(self, candidate_paths, obs_xy, MACARON_TREAD):
-        max_distance = 0
-        original_candidate = candidate_paths
-        #print(candidate_paths)
-        candidate_paths = np.delete(candidate_paths,self.non_center)
-        #print(candidate_paths)
-        
-        #try:
-        select_path = candidate_paths[0]
-        max_dis = 0
-        for fp in candidate_paths:
-            cur_distance = 0
-            ##########################################
-            fp.x.extend(fp.xplus)
-            fp.y.extend(fp.yplus)
-            ##########################################
-            for xy in obs_xy:
-                ##########################################
-                collision, fp.obs_distance = self.check_collision(xy[0], xy[1], fp.x, fp.y, MACARON_TREAD, MODE=0)
-                if not collision:
-                    select_path = fp
-                elif fp.obs_distance > max_dis:
-                    select_path = fp
-
-        return select_path
-
-    def optimal_trajectory(self, x, y, heading, obs_xy, qf=ROAD_WIDTH/2, path_num=5, path_len=3, MACARON_TREAD=2, parking=0):
-        # collision_count = False
+    def optimal_trajectory(self, x, y, heading, qf=ROAD_WIDTH/2, path_num=3, path_len=3):
         if path_num == 3:
             self.S_MARGIN = 3  # 3차 사전주행 값 3
         else:
@@ -274,85 +153,64 @@ class TrajectoryPlanner: # path planner
         self.current_s = si
         self.current_q = qi
         ryaw = self.glob_path.get_current_reference_yaw()
-        dtheta = heading - ryaw
-
-        if path_num == -1:
-            safe_candidate_paths = self.generate_path_reverse(si, qi, dtheta, path_len, 0, 1)
-        else:
-            safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, 0, 1)
+        dtheta = heading - ryaw #여기 먼가 이상할수도 (2파이 보정부분때매 나중에 확인 ㄱ)
         
-        if path_num == 1 or path_num == -1:
-            if self.visual is True:
-                self.visual_selected(safe_candidate_paths[0])
-            return safe_candidate_paths[0]
-            
-
-        selected_path = self.__select_optimal_trajectory(safe_candidate_paths, obs_xy,MACARON_TREAD)
-        if selected_path is None:
-            # collision_count = True
-            safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, qf, path_num)
-            ############### RVIZ 비쥬얼 코드 ##############
-            # if self.visual == True:
-            #     self.visual_candidate_5(safe_candidate_paths)
-            ##############################################
-            selected_path = self.__select_optimal_trajectory(safe_candidate_paths, obs_xy,MACARON_TREAD)
-
-            if selected_path is None:
-                print("nothing is selected!!!!!!!!!!!!!!!!!")
-                selected_path = self.__select_longest_trajectory(safe_candidate_paths,obs_xy,MACARON_TREAD)
-        
+        safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, qf, path_num)
+        selected_path = self.__select_optimal_trajectory(safe_candidate_paths)
+       
         self.last_selected_path = selected_path
+        
         ############### RVIZ 비쥬얼 코드 ##############
         if self.visual == True:
             self.visual_selected(selected_path)
-            # self.max_curvature_pub(selected_path, collision_count, path_len, heading)
         ##############################################
 
         return selected_path
-        # return selected_path.x, selected_path.y
 
+    # def optimal_trajectory(self, x, y, heading, obs_xy, qf=ROAD_WIDTH/2, path_num=5, path_len=3, MACARON_TREAD=2, parking=0):
+    #         # collision_count = False
+    #         if path_num == 3:
+    #             self.S_MARGIN = 3  # 3차 사전주행 값 3
+    #         else:
+    #             self.S_MARGIN = 1.8 + 5   # 예선 : 1.8, 본선 : 5 # 3차 사전주행 값 5
 
+    #         si, qi = self.glob_path.xy2sl(x, y)
+    #         self.current_s = si
+    #         self.current_q = qi
+    #         ryaw = self.glob_path.get_current_reference_yaw()
+    #         dtheta = heading - ryaw
 
-    # def optimal_trajectory_parking(self, x, y, heading, obs_xy, qf = ROAD_WIDTH, path_num = 3, path_len = 5,MACARON_TREAD=1.5):
-    #     self.collision_count = False
-    #     self.S_MARGIN = 3
-    #     si, qi = self.glob_path.xy2sl(x, y)
-    #     self.current_s = si
-    #     self.current_q = qi
-    #     ryaw = self.glob_path.get_current_reference_yaw()
-    #     dtheta = heading - ryaw
-    #     safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, 0, 1)
+    #         if path_num == -1:
+    #             safe_candidate_paths = self.generate_path_reverse(si, qi, dtheta, path_len, 0, 1)
+    #         else:
+    #             safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, 0, 1)
+            
+    #         if path_num == 1 or path_num == -1:
+    #             if self.visual is True:
+    #                 self.visual_selected(safe_candidate_paths[0])
+    #             return safe_candidate_paths[0]
+                
 
-    #     if path_num == 1:
-    #         if self.visual == True:
-    #             self.visual_selected(safe_candidate_paths[0])
-    #             self.max_curvature_pub(safe_candidate_paths[0], self.collision_count, path_len, heading)
-    #         return safe_candidate_paths[0], self.collision_count
+    #         selected_path = self.__select_optimal_trajectory(safe_candidate_paths, obs_xy,MACARON_TREAD)
+    #         if selected_path is None:
+    #             # collision_count = True
+    #             safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, qf, path_num)
+    #             ############### RVIZ 비쥬얼 코드 ##############
+    #             # if self.visual == True:
+    #             #     self.visual_candidate_5(safe_candidate_paths)
+    #             ##############################################
+    #             selected_path = self.__select_optimal_trajectory(safe_candidate_paths, obs_xy,MACARON_TREAD)
 
-    #     selected_path = self.__select_optimal_trajectory(safe_candidate_paths, obs_xy,MACARON_TREAD)
-    #     if selected_path is None:
-    #         self.collision_count = True
-    #         print("collision 1")
-    #         safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, qf, path_num)
+    #             if selected_path is None:
+    #                 print("nothing is selected!!!!!!!!!!!!!!!!!")
+    #                 selected_path = self.__select_longest_trajectory(safe_candidate_paths,obs_xy,MACARON_TREAD)
+            
+    #         self.last_selected_path = selected_path
     #         ############### RVIZ 비쥬얼 코드 ##############
     #         if self.visual == True:
-    #             self.visual_candidate_5(safe_candidate_paths)
+    #             self.visual_selected(selected_path)
+    #             # self.max_curvature_pub(selected_path, collision_count, path_len, heading)
     #         ##############################################
-    #         selected_path = self.__select_optimal_trajectory(safe_candidate_paths, obs_xy,MACARON_TREAD)
 
-    #         if selected_path is None:
-    #             print("collision 2")
-    #             self.collision_count = True
-    #             selected_path = self.__select_longest_trajectory(safe_candidate_paths,obs_xy,MACARON_TREAD)
-        
-    #     self.last_selected_path = selected_path
-    #     ############### RVIZ 비쥬얼 코드 ##############
-    #     if self.visual == True:
-    #         self.visual_selected(selected_path)
-    #         self.max_curvature_pub(selected_path, self.collision_count, path_len, heading)
-
-    #     ##############################################
-
-    #     selected_path = safe_candidate_paths[0]
-
-    #     return selected_path, self.collision_count
+    #         return selected_path
+    #         # return selected_path.x, selected_path.y
