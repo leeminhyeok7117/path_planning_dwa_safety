@@ -20,10 +20,8 @@ from sensor_msgs.msg import PointCloud
 from geometry_msgs.msg import Point32
 from std_msgs.msg import Float64
 import numpy as np
-from math import sin, cos, tan, pi, isnan
-#from cv2 import getGaussianKernel
 import os, sys
-#sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+
 from global_path import GlobalPath
 import polynomial as polynomial
 import frenet_path as frenet_path
@@ -48,8 +46,6 @@ class TrajectoryPlanner: # path planner
         
         qos_profile = QoSProfile(depth = 10)
 
-        #중앙차선
-        PATH_ROOT=(os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))))+"/path/npy_file/" #/home/gigi/catkin_ws/src/macaron_3/
         self.center = []
        
         self.candidate_pub = self.node.create_publisher(PointCloud,'/CDpath_tr', qos_profile)
