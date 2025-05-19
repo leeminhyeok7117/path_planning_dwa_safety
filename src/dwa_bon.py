@@ -18,11 +18,6 @@ mode 1: 차선을 변경 해야 하는 넓은 범위의 정적 장애물 회피 
 mode 2: gps mapping 을 이용한 track 에서 rubber cone 회피
 mode 3: 유턴
 """
-
-"""
-class DWA_visual(Node):
-    def __init__(self):
-        super().__init__('dwa')"""
         
 class DWA:
     def __init__(self, node, gp_name):
