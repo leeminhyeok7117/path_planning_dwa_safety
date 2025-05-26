@@ -135,7 +135,7 @@ class TrajectoryPlanner: # path planner
         ryaw = self.glob_path.get_current_reference_yaw_no_s()
         dtheta = heading - ryaw 
         
-        safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, qf, path_num)
+        safe_candidate_paths = self.generate_path(si, qi, dtheta, path_len, qf=0.0, path_num=1)
         selected_path = self.__select_optimal_trajectory(safe_candidate_paths)
        
         self.last_selected_path = selected_path
