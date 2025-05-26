@@ -108,6 +108,12 @@ class DWA:
 
     # noinspection PyMethodMayBeStatic
     def convert_coordinate_l2g(self, d_x, d_y, d_theta):  # local -> global 좌표 변환 함수
+        # d_x = np.atleast_1d(d_x)
+        # d_y = np.atleast_1d(d_y)
+        # d_theta = np.atleast_1d(d_theta)
+        
+        # if len(d_x) == 0 or len(d_y) == 0 or len(d_theta) == 0:
+        #     return np.empty((0, 3))  # 빈 결과 리턴
         d_theta = -pi / 2 + d_theta
         x_global = cos(d_theta) * d_x - sin(d_theta) * d_y
         y_global = sin(d_theta) * d_x + cos(d_theta) * d_y
@@ -122,7 +128,7 @@ class DWA:
             
         R = self.wheel_base / tan(-steer) if steer != 0.0 else float('inf')
         theta_arr, future_pos = [], []
-        frame_arr = np.arange(self.search_frame)
+        frame_arr = self.search_frame
         if np.isinf(R):
             theta_arr = np.zeros_like(frame_arr, dtype=float)
             dx = np.zeros_like(frame_arr, dtype=float)
