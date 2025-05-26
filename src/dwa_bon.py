@@ -108,12 +108,6 @@ class DWA:
 
     # noinspection PyMethodMayBeStatic
     def convert_coordinate_l2g(self, d_x, d_y, d_theta):  # local -> global 좌표 변환 함수
-        # d_x = np.atleast_1d(d_x)
-        # d_y = np.atleast_1d(d_y)
-        # d_theta = np.atleast_1d(d_theta)
-        
-        # if len(d_x) == 0 or len(d_y) == 0 or len(d_theta) == 0:
-        #     return np.empty((0, 3))  # 빈 결과 리턴
         d_theta = -pi / 2 + d_theta
         x_global = cos(d_theta) * d_x - sin(d_theta) * d_y
         y_global = sin(d_theta) * d_x + cos(d_theta) * d_y
@@ -122,13 +116,21 @@ class DWA:
         # return : local coordinate 에서의 [d_x, d_y, d_theta] 를 global coordinate 에서의 [d_x', d_y', d_theta'] 로 반환
 
     def generate_predict_point(self, x, y, velocity, steer, heading, mode):  # local 좌표계 에서 예측 점 좌표를 구해서 global 좌표로 return
-            # 접선 이동 거리 (= 호의 길이로 사용할 예정)
-        tan_dis = min((velocity * self.predict_time / 3.6 + 0.1, 0.9, 0.8)[mode], 1.0)
-            # Assuming Bicycle model, (곡률 반경) = (차축 간 거리) / tan(조향각)
+        # 접선 이동 거리 (= 호의 길이로 사용할 예정)
+        if mode == 0:
+            tan_dis = velocity * self.predict_time / 3.6 + 0.1
+
+            if tan_dis >= 1.0: tan_dis = 1.0
+        elif mode == 1: # mini_obs tan_distance
+            tan_dis = 0.9
+        elif mode == 2: # big_obs tan_distance
+            tan_dis = 0.8
             
+        # Assuming Bicycle model, (곡률 반경) = (차축 간 거리) / tan(조향각)
         R = self.wheel_base / tan(-steer) if steer != 0.0 else float('inf')
         theta_arr, future_pos = [], []
-        frame_arr = self.search_frame
+        frame_arr = np.arange(1, self.search_frame + 1)
+        
         if np.isinf(R):
             theta_arr = np.zeros_like(frame_arr, dtype=float)
             dx = np.zeros_like(frame_arr, dtype=float)
