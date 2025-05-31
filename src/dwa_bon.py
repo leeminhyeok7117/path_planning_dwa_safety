@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding:utf-8-*-
 
-from math import *
-
 import numpy as np
 import rclpy
 from rclpy.qos import QoSProfile
@@ -108,10 +106,10 @@ class DWA:
 
     # noinspection PyMethodMayBeStatic
     def convert_coordinate_l2g(self, d_x, d_y, d_theta):  # local -> global 좌표 변환 함수
-        d_theta = -pi / 2 + d_theta
-        x_global = cos(d_theta) * d_x - sin(d_theta) * d_y
-        y_global = sin(d_theta) * d_x + cos(d_theta) * d_y
-        theta_global = pi /2 + d_theta
+        d_theta = -np.pi / 2 + d_theta
+        x_global = np.cos(d_theta) * d_x - np.sin(d_theta) * d_y
+        y_global = np.sin(d_theta) * d_x + np.cos(d_theta) * d_y
+        theta_global = np.pi /2 + d_theta
         return np.stack([x_global, y_global, theta_global], axis=1)
         # return : local coordinate 에서의 [d_x, d_y, d_theta] 를 global coordinate 에서의 [d_x', d_y', d_theta'] 로 반환
 
@@ -127,18 +125,18 @@ class DWA:
             tan_dis = 0.8
             
         # Assuming Bicycle model, (곡률 반경) = (차축 간 거리) / tan(조향각)
-        R = self.wheel_base / tan(-steer) if steer != 0.0 else float('inf')
+        R = self.wheel_base / np.tan(-steer) if steer != 0.0 else float('inf')
         theta_arr, future_pos = [], []
-        frame_arr = np.arange(1, self.search_frame + 1)
+        frame_arr = np.arange(self.search_frame)
         
         if np.isinf(R):
             theta_arr = np.zeros_like(frame_arr, dtype=float)
             dx = np.zeros_like(frame_arr, dtype=float)
-            dy = tan_dis * (frame_arr + 1)
+            dy = tan_dis * (frame_arr)
         else:
             theta_arr = np.cumsum(np.full(frame_arr, tan_dis / R))
             dx = R * (1 - np.cos(theta_arr))
-            dy = R * np.sin(theta_arr)
+            dy = R * np.sin(theta_arr + 1)
 
         future_pos = self.convert_coordinate_l2g(dx, dy, theta_arr + heading)
         future_pos[:, 0] += x
